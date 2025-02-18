@@ -1,0 +1,313 @@
+.theater__seating {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+  width: 100%;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: var(--spacing-md);
+  background: rgba(0, 0, 0, 0.8);
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+  border-radius: var(--border-radius-lg);
+}
+
+.theater__section {
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: var(--border-radius-lg);
+  padding: var(--spacing-lg);
+  width: 100%;
+  box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.3);
+}
+
+.theater__section-title {
+  color: var(--accent-color);
+  text-align: center;
+  margin-bottom: var(--spacing-xl);
+  font-size: 1.4rem;
+  text-transform: uppercase;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.theater__grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+.theater__combined-row {
+  display: grid;
+  grid-template-columns: 1fr 2fr 1fr;
+  gap: var(--spacing-xl);
+  align-items: center;
+  padding: var(--spacing-sm);
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: var(--border-radius-md);
+}
+
+.theater__side-section {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  min-width: 0;
+}
+
+.theater__side-section.left {
+  justify-content: flex-end;
+}
+
+.theater__side-section.right {
+  justify-content: flex-start;
+}
+
+.theater__middle-section {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  justify-content: center;
+  min-width: 0;
+}
+
+.theater__row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  justify-content: center;
+  padding: var(--spacing-sm);
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: var(--border-radius-md);
+}
+
+.theater__row-label {
+  min-width: 40px;
+  text-align: center;
+  font-weight: bold;
+  color: var(--text-light);
+  background: rgba(0, 0, 0, 0.4);
+  padding: var(--spacing-xs);
+  border-radius: var(--border-radius-sm);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.theater__seats-container {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: nowrap;
+  padding: var(--spacing-xs);
+}
+
+.theater__selected-seats {
+  background: rgba(0, 0, 0, 0.6);
+  padding: var(--spacing-lg);
+  border-radius: var(--border-radius-md);
+  text-align: center;
+  margin-top: var(--spacing-lg);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.theater__selected-seats h3 {
+  color: var(--accent-color);
+  margin-bottom: var(--spacing-md);
+}
+
+.theater__selected-list {
+  color: var(--text-light);
+  line-height: 1.6;
+  word-break: break-word;
+}
+
+/* Responsive Design */
+@media (max-width: 1400px) {
+  .theater__combined-row {
+    grid-template-columns: 1fr 2.5fr 1fr;
+    gap: var(--spacing-md);
+  }
+  
+  .theater__seats-container {
+    gap: 4px;
+  }
+}
+
+@media (max-width: 1200px) {
+  .theater__seating {
+    padding: var(--spacing-sm);
+  }
+
+  .theater__combined-row {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-lg);
+  }
+
+  .theater__side-section.left,
+  .theater__side-section.right {
+    justify-content: center;
+  }
+
+  .theater__section {
+    padding: var(--spacing-md);
+  }
+}
+
+@media (max-width: 768px) {
+  .theater__section-title {
+    font-size: 1.1rem;
+    margin-bottom: var(--spacing-lg);
+  }
+
+  .theater__seats-container {
+    gap: 3px;
+    padding: var(--spacing-xs);
+  }
+
+  .theater__row-label {
+    min-width: 35px;
+    font-size: 0.9rem;
+  }
+
+  .theater__combined-row,
+  .theater__row {
+    padding: var(--spacing-xs);
+  }
+}
+
+@media (max-width: 480px) {
+  .theater__section-title {
+    font-size: 1rem;
+  }
+
+  .theater__seats-container {
+    gap: 2px;
+  }
+
+  .theater__row-label {
+    min-width: 30px;
+    font-size: 0.8rem;
+  }
+}
+
+/* Scrollbar Styling */
+.theater__seats-container::-webkit-scrollbar {
+  height: 6px;
+}
+
+.theater__seats-container::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 3px;
+}
+
+.theater__seats-container::-webkit-scrollbar-thumb {
+  background: var(--accent-color);
+  border-radius: 3px;
+}
+
+/* Touch Device Optimization */
+@media (hover: none) {
+  .theater__section {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Add these to your existing styles */
+
+.theater__loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-xl);
+  gap: var(--spacing-md);
+}
+
+.theater__loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(255, 255, 255, 0.1);
+  border-left-color: var(--accent-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.theater__loading-text {
+  color: var(--text-light);
+  font-size: 1.1rem;
+}
+
+.theater__title {
+  color: var(--accent-color);
+  text-align: center;
+  font-size: 2rem;
+  margin-bottom: var(--spacing-xl);
+}
+
+.theater__stage {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-light);
+  text-align: center;
+  padding: var(--spacing-md);
+  margin: var(--spacing-xl) auto;
+  width: 80%;
+  max-width: 800px;
+  border-radius: var(--border-radius-md);
+}
+
+.theater__legend {
+  display: flex;
+  justify-content: center;
+  gap: var(--spacing-xl);
+  margin-top: var(--spacing-xl);
+}
+
+.theater__legend-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  color: var(--text-light);
+}
+
+.theater__error {
+  background-color: var(--danger-color);
+  color: white;
+  padding: var(--spacing-md);
+  border-radius: var(--border-radius-md);
+  margin: var(--spacing-md) 0;
+  text-align: center;
+  animation: fadeIn 0.3s ease;
+}
+
+.theater__booking {
+  margin-top: var(--spacing-lg);
+  text-align: center;
+}
+
+.theater__confirm-button {
+  background-color: var(--accent-color);
+  color: white;
+  border: none;
+  padding: var(--spacing-md) var(--spacing-lg);
+  border-radius: var(--border-radius-md);
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.theater__confirm-button:hover {
+  background-color: var(--accent-color-dark);
+  transform: translateY(-2px);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

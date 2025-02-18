@@ -1,0 +1,321 @@
+:root {
+  --seat-size: clamp(14px, 1.5vw, 20px);
+  --seat-gap: clamp(1px, 0.3vw, 2px);
+  --row-gap: clamp(1px, 0.4vw, 3px);
+  --section-padding: clamp(8px, 1.5vw, 16px);
+  --gold: #FFD700;
+  --stage-bg: rgba(255, 215, 0, 0.1);
+}
+
+.theater__seating {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+  padding: var(--section-padding);
+  background: rgba(0, 0, 0, 0.8);
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+  border-radius: var(--border-radius-lg);
+  overflow-x: auto;
+}
+
+.theater__title {
+  color: #FFD700;
+  text-align: center;
+  font-size: clamp(24px, 5vw, 40px);
+  margin-bottom: clamp(16px, 4vw, 32px);
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Stage styles */
+.theater__stage-container {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 32px;
+  position: relative;
+}
+
+.theater__stage {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-light);
+  text-align: center;
+  padding: clamp(8px, 2vw, 16px);
+  width: min(600px, 80%);
+  border-radius: var(--border-radius-md);
+  font-weight: bold;
+  letter-spacing: 2px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  font-size: clamp(12px, 1.8vw, 16px);
+  position: relative;
+}
+
+/* Add decorative lines to stage */
+.theater__stage::before,
+.theater__stage::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: min(150px, 15vw);
+  height: 1px;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.theater__stage::before {
+  right: 100%;
+  margin-right: 20px;
+}
+
+.theater__stage::after {
+  left: 100%;
+  margin-left: 20px;
+}
+
+/* Section styles */
+.theater__section {
+  width: 100%;
+  padding: var(--section-padding);
+  margin-bottom: 24px;
+  overflow: visible;
+}
+
+.theater__grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--row-gap);
+  align-items: center;
+  width: 100%;
+}
+
+.theater__row {
+  display: flex;
+  align-items: center;
+  gap: var(--seat-gap);
+  width: 100%;
+  justify-content: center;
+}
+
+.theater__seats-container {
+  display: flex;
+  gap: var(--seat-gap);
+  justify-content: center;
+  flex-wrap: nowrap;
+}
+
+.theater__row-label {
+  min-width: 16px;
+  text-align: center;
+  color: var(--text-light);
+  font-weight: bold;
+  margin: 0 2px;
+  font-size: clamp(8px, 1.2vw, 12px);
+}
+
+.theater__section-title {
+  color: #FFD700;
+  text-align: center;
+  margin-bottom: 16px;
+  font-size: clamp(16px, 2.5vw, 20px);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.theater__legend {
+  display: flex;
+  justify-content: center;
+  gap: clamp(8px, 2vw, 24px);
+  margin-top: 16px;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: var(--border-radius-md);
+  flex-wrap: wrap;
+}
+
+.theater__legend-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-light);
+  font-size: clamp(10px, 1.5vw, 12px);
+}
+
+.theater__seat {
+  width: var(--seat-size);
+  height: var(--seat-size);
+  border: none;
+  border-radius: clamp(4px, 1vw, 6px);
+  transition: all 0.2s ease;
+  position: relative;
+  padding: 2px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: clamp(6px, 1vw, 8px);
+  font-weight: bold;
+  color: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.theater__seat:hover {
+  transform: scale(1.1);
+  z-index: 1;
+}
+
+.theater__seat--available {
+  background-color: #4CAF50;
+}
+
+.theater__seat--selected {
+  background-color: #2196F3;
+  transform: scale(1.1);
+  z-index: 1;
+  box-shadow: 0 0 8px rgba(33, 150, 243, 0.6);
+}
+
+.theater__seat--occupied {
+  background-color: #F44336;
+  cursor: not-allowed;
+  opacity: 0.8;
+}
+
+.theater__combined-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: clamp(4px, 1vw, 8px);
+  padding: 1px 0;
+  width: 100%;
+}
+
+.theater__side-section {
+  display: flex;
+  align-items: center;
+  gap: var(--seat-gap);
+}
+
+.theater__middle-section {
+  display: flex;
+  align-items: center;
+  gap: var(--seat-gap);
+  justify-content: center;
+}
+
+.theater__side-section.left {
+  justify-content: flex-end;
+}
+
+.theater__side-section.right {
+  justify-content: flex-start;
+}
+
+/* Remove scroll indicators since we don't need them anymore */
+.theater__section::before,
+.theater__section::after {
+  display: none;
+}
+
+/* Media queries for different screen sizes */
+@media (max-width: 1200px) {
+  :root {
+    --seat-size: clamp(12px, 1.3vw, 18px);
+  }
+}
+
+@media (max-width: 768px) {
+  :root {
+    --seat-size: clamp(10px, 1.2vw, 16px);
+    --seat-gap: 1px;
+    --row-gap: 1px;
+  }
+
+  .theater__row-label {
+    min-width: 14px;
+    font-size: clamp(7px, 1vw, 10px);
+  }
+}
+
+/* Remove all scroll-related styles */
+.theater__section::-webkit-scrollbar,
+.theater__section::-webkit-scrollbar-track,
+.theater__section::-webkit-scrollbar-thumb {
+  display: none;
+}
+
+/* Responsive counter section */
+.theater__counter-section {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: clamp(8px, 2vw, 16px);
+  padding: var(--section-padding);
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto 24px;
+}
+
+.theater__counter-card {
+  min-width: unset;
+  width: 100%;
+}
+
+.theater__counter-value {
+  font-size: clamp(18px, 3vw, 28px);
+  font-weight: bold;
+  color: #FFD700;
+  margin-bottom: 8px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.theater__counter-card:nth-child(1) .theater__counter-value {
+  color: #FFD700; /* Gold */
+}
+
+.theater__counter-card:nth-child(2) .theater__counter-value {
+  color: #4CAF50; /* Green */
+}
+
+.theater__counter-card:nth-child(3) .theater__counter-value {
+  color: #2196F3; /* Blue */
+}
+
+.theater__counter-card:nth-child(4) .theater__counter-value {
+  color: #F44336; /* Red */
+}
+
+.theater__counter-label {
+  font-size: clamp(10px, 1.5vw, 12px);
+  color: rgba(255, 255, 255, 0.8);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* Add animation keyframes */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Add glass effect for modern browsers */
+@supports (backdrop-filter: blur(10px)) {
+  .theater__counter-card {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+  }
+}
+
+/* Remove previous middle-row styles as they're no longer needed */
+.theater__middle-row {
+  display: none;
+} 

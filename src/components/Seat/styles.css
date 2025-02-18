@@ -1,0 +1,102 @@
+.theater__seat {
+  min-width: 28px;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: var(--border-radius-sm);
+  transition: all 0.2s ease;
+  position: relative;
+  padding: 2px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--primary-color);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.theater__seat-number {
+  font-size: 9px;
+  color: var(--text-light);
+  line-height: 1;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.theater__seat--available {
+  background-color: var(--primary-color);
+}
+
+.theater__seat--selected {
+  background-color: var(--secondary-color);
+  transform: scale(1.1);
+  z-index: 1;
+  box-shadow: 0 0 8px rgba(var(--secondary-color-rgb), 0.6);
+}
+
+.theater__seat--occupied {
+  background-color: var(--danger-color);
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.theater__seat:hover:not(:disabled) {
+  transform: scale(1.1);
+  z-index: 1;
+  box-shadow: 0 0 8px rgba(var(--primary-color-rgb), 0.6);
+}
+
+.theater__seat:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+/* Responsive Breakpoints */
+@media (max-width: 1400px) {
+  .theater__seat {
+    min-width: 26px;
+    width: 26px;
+    height: 26px;
+  }
+}
+
+@media (max-width: 1200px) {
+  .theater__seat {
+    min-width: 24px;
+    width: 24px;
+    height: 24px;
+  }
+}
+
+@media (max-width: 768px) {
+  .theater__seat {
+    min-width: 22px;
+    width: 22px;
+    height: 22px;
+  }
+
+  .theater__seat-number {
+    font-size: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .theater__seat {
+    min-width: 20px;
+    width: 20px;
+    height: 20px;
+  }
+
+  .theater__seat-number {
+    font-size: 7px;
+  }
+}
+
+/* Touch Device Optimizations */
+@media (hover: none) {
+  .theater__seat:hover:not(:disabled) {
+    transform: none;
+  }
+  
+  .theater__seat:active:not(:disabled) {
+    transform: scale(0.95);
+  }
+}

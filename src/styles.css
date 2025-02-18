@@ -1,0 +1,122 @@
+/* Reset and base styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Arial', sans-serif;
+  background-color: #1a1a1a;
+  color: white;
+}
+
+/* Theater container */
+.theater {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  min-height: 100vh;
+}
+
+/* Header styles */
+.theater__header {
+  text-align: center;
+  margin-bottom: 40px;
+  padding: 20px;
+}
+
+.theater__header h1 {
+  font-size: 2.5rem;
+  color: #ffd700;
+  text-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+}
+
+/* Main content area */
+.theater__main {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+
+/* Screen styles */
+.theater__screen {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  perspective: 100px;
+}
+
+.theater__screen-box {
+  width: 80%;
+  max-width: 800px;
+  height: 60px;
+  background: linear-gradient(45deg, #666666, #999999);
+  transform: rotateX(-5deg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
+}
+
+.theater__screen-box p {
+  color: #333;
+  font-weight: bold;
+  font-size: 1.2rem;
+}
+
+/* Legend styles */
+.theater__legend {
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  margin-top: 20px;
+}
+
+.theater__legend-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.theater__legend-item .theater__seat {
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .theater {
+    padding: 10px;
+  }
+
+  .theater__header h1 {
+    font-size: 2rem;
+  }
+
+  .theater__screen-box {
+    width: 90%;
+    height: 40px;
+  }
+
+  .theater__legend {
+    flex-wrap: wrap;
+    gap: 15px;
+  }
+}
+
+@media (max-width: 480px) {
+  .theater__header h1 {
+    font-size: 1.5rem;
+  }
+
+  .theater__legend-item .theater__seat {
+    width: 20px;
+    height: 20px;
+  }
+
+  .theater__legend-item span {
+    font-size: 0.9rem;
+  }
+}

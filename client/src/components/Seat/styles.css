@@ -1,0 +1,37 @@
+.theater__seat {
+  min-width: 30px;
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: var(--border-radius-sm);
+  transition: all 0.2s ease;
+  position: relative;
+  padding: 2px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.theater__seat--available {
+  background-color: var(--primary-color);
+}
+
+.theater__seat--selected {
+  background-color: var(--secondary-color);
+  transform: scale(1.1);
+  z-index: 1;
+  box-shadow: 0 0 8px rgba(33, 150, 243, 0.6);
+}
+
+.theater__seat--occupied {
+  background-color: var(--danger-color);
+  cursor: not-allowed;
+}
+
+.theater__seat-number {
+  font-size: 10px;
+  color: var(--text-light);
+  line-height: 1;
+} 
