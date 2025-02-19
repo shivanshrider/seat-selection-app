@@ -14,21 +14,21 @@
   width: 100%;
   max-width: 100%;
   margin: 0 auto;
-  padding: var(--section-padding);
-  background: rgba(0, 0, 0, 0.8);
+  padding: 20px;
+  background: #000;
   box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
   border-radius: var(--border-radius-lg);
   overflow-x: auto;
+  min-height: 100vh;
+  color: white;
 }
 
 .theater__title {
+  font-size: 32px;
   color: #FFD700;
   text-align: center;
-  font-size: clamp(24px, 5vw, 40px);
-  margin-bottom: clamp(16px, 4vw, 32px);
-  text-transform: uppercase;
-  letter-spacing: 3px;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  margin-bottom: 20px;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.3);
 }
 
 /* Stage styles */
@@ -36,44 +36,73 @@
   width: 100%;
   display: flex;
   justify-content: center;
-  align-items: center;
-  margin-bottom: 32px;
-  position: relative;
+  margin: 20px 0 40px;
 }
 
 .theater__stage {
-  background: rgba(255, 255, 255, 0.1);
-  color: var(--text-light);
-  text-align: center;
-  padding: clamp(8px, 2vw, 16px);
-  width: min(600px, 80%);
-  border-radius: var(--border-radius-md);
+  width: 600px;
+  height: 80px;
+  background: #2C3E50;
+  color: #FFD700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
   font-weight: bold;
-  letter-spacing: 2px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  font-size: clamp(12px, 1.8vw, 16px);
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.3);
   position: relative;
 }
 
-/* Add decorative lines to stage */
-.theater__stage::before,
 .theater__stage::after {
   content: '';
   position: absolute;
-  top: 50%;
-  width: min(150px, 15vw);
-  height: 1px;
-  background: rgba(255, 255, 255, 0.2);
+  bottom: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-left: 20px solid transparent;
+  border-right: 20px solid transparent;
+  border-top: 20px solid #2C3E50;
 }
 
-.theater__stage::before {
-  right: 100%;
-  margin-right: 20px;
+.theater__vip-section {
+  display: flex;
+  justify-content: center;
+  gap: 40px;
+  margin: 30px 0 20px;
+  padding: 10px;
 }
 
-.theater__stage::after {
-  left: 100%;
-  margin-left: 20px;
+.theater__vip-sofa {
+  width: 120px;
+  height: 60px;
+  background: #8B4513;
+  border-radius: 15px 15px 5px 5px;
+  position: relative;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.theater__vip-sofa::before {
+  content: '';
+  position: absolute;
+  top: -15px;
+  left: 0;
+  right: 0;
+  height: 20px;
+  background: #A0522D;
+  border-radius: 15px 15px 0 0;
+}
+
+.theater__vip-label {
+  color: #FFD700;
+  font-size: 14px;
+  font-weight: bold;
+  text-transform: uppercase;
+  position: relative;
+  z-index: 1;
 }
 
 /* Section styles */
@@ -82,6 +111,7 @@
   padding: var(--section-padding);
   margin-bottom: 24px;
   overflow: visible;
+  margin-top: 40px;
 }
 
 .theater__grid {
@@ -90,30 +120,28 @@
   gap: var(--row-gap);
   align-items: center;
   width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
 .theater__row {
   display: flex;
   align-items: center;
-  gap: var(--seat-gap);
-  width: 100%;
-  justify-content: center;
+  margin: 5px 0;
 }
 
-.theater__seats-container {
+.theater__seats {
   display: flex;
-  gap: var(--seat-gap);
-  justify-content: center;
   flex-wrap: nowrap;
+  align-items: center;
+  justify-content: flex-start;
 }
 
 .theater__row-label {
-  min-width: 16px;
+  width: 30px;
   text-align: center;
-  color: var(--text-light);
-  font-weight: bold;
-  margin: 0 2px;
-  font-size: clamp(8px, 1.2vw, 12px);
+  margin-right: 10px;
+  color: white;
 }
 
 .theater__section-title {
@@ -145,22 +173,15 @@
 }
 
 .theater__seat {
-  width: var(--seat-size);
-  height: var(--seat-size);
+  width: 30px;
+  height: 30px;
   border: none;
-  border-radius: clamp(4px, 1vw, 6px);
-  transition: all 0.2s ease;
-  position: relative;
-  padding: 2px;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  border-radius: 4px;
   cursor: pointer;
-  font-size: clamp(6px, 1vw, 8px);
-  font-weight: bold;
-  color: rgba(255, 255, 255, 0.9);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  background-color: #4CAF50; /* Default green */
+  color: white;
+  font-size: 12px;
+  transition: all 0.3s ease;
 }
 
 .theater__seat:hover {
@@ -168,21 +189,52 @@
   z-index: 1;
 }
 
-.theater__seat--available {
-  background-color: #4CAF50;
-}
-
 .theater__seat--selected {
-  background-color: #2196F3;
-  transform: scale(1.1);
-  z-index: 1;
-  box-shadow: 0 0 8px rgba(33, 150, 243, 0.6);
+  background-color: #2196F3; /* Blue when selected */
+  animation: pulse 1s infinite;
 }
 
-.theater__seat--occupied {
-  background-color: #F44336;
+.theater__seat--locked {
+  background-color: #F44336; /* Red when locked */
   cursor: not-allowed;
-  opacity: 0.8;
+}
+
+/* Add visual feedback for real-time updates */
+@keyframes highlight {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(33, 150, 243, 0.4); }
+  50% { transform: scale(1.1); box-shadow: 0 0 0 10px rgba(33, 150, 243, 0); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(33, 150, 243, 0); }
+}
+
+.theater__seat--updating {
+  animation: highlight 0.5s ease-out;
+}
+
+/* Improve timer visibility */
+.theater__seat-timer {
+  position: absolute;
+  top: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-size: 12px;
+  white-space: nowrap;
+  z-index: 1;
+}
+
+/* Center the T row */
+.theater__row:last-child .theater__seats {
+  justify-content: center;
+}
+
+.theater__seat-gap {
+  width: 40px; /* Consistent gap width */
+  height: 30px;
+  margin: 2px 10px;
+  display: inline-block;
 }
 
 .theater__combined-row {
@@ -239,6 +291,21 @@
     min-width: 14px;
     font-size: clamp(7px, 1vw, 10px);
   }
+
+  .theater__stage {
+    width: 400px;
+    height: 60px;
+    font-size: 24px;
+  }
+
+  .theater__vip-sofa {
+    width: 100px;
+    height: 50px;
+  }
+
+  .theater__vip-section {
+    gap: 20px;
+  }
 }
 
 /* Remove all scroll-related styles */
@@ -251,17 +318,16 @@
 /* Responsive counter section */
 .theater__counter-section {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-  gap: clamp(8px, 2vw, 16px);
-  padding: var(--section-padding);
-  width: 100%;
-  max-width: 1200px;
-  margin: 0 auto 24px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+  margin-bottom: 30px;
 }
 
 .theater__counter-card {
-  min-width: unset;
-  width: 100%;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 15px;
+  border-radius: 8px;
+  text-align: center;
 }
 
 .theater__counter-value {
@@ -318,4 +384,230 @@
 /* Remove previous middle-row styles as they're no longer needed */
 .theater__middle-row {
   display: none;
+}
+
+.theater__loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: #1a1a1a;
+  color: white;
+}
+
+.theater__loading-spinner {
+  width: 50px;
+  height: 50px;
+  border: 3px solid rgba(255, 215, 0, 0.3);
+  border-radius: 50%;
+  border-top-color: #FFD700;
+  animation: spin 1s ease-in-out infinite;
+  margin-bottom: 20px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.theater__error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: #1a1a1a;
+  color: white;
+  padding: 20px;
+  text-align: center;
+}
+
+.theater__error button {
+  margin-top: 20px;
+  padding: 10px 20px;
+  background: #FFD700;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.theater__status {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  padding: 8px 16px;
+  border-radius: 20px;
+  background: rgba(0, 0, 0, 0.8);
+  z-index: 1000;
+}
+
+.status-connected {
+  color: #4CAF50;
+}
+
+.status-disconnected {
+  color: #F44336;
+}
+
+.theater__connection-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.theater__connection-status::before {
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.theater__status-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: 10px;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 1000;
+}
+
+.connection-status {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  z-index: 1000;
+}
+
+.connection-status.connected {
+  background: #4CAF50;
+  color: white;
+}
+
+.connection-status.disconnected {
+  background: #F44336;
+  color: white;
+  animation: blink 1s infinite;
+}
+
+.connection-status.reconnecting {
+  background: #FFC107;
+  color: black;
+}
+
+.connection-status.error {
+  background: #FF9800;
+  color: white;
+  animation: blink 1s infinite;
+}
+
+.connection-status.failed {
+  background: #F44336;
+  color: white;
+  animation: shake 0.5s ease-in-out;
+}
+
+.last-update {
+  color: #fff;
+  font-size: 12px;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+.theater__seat-container {
+  position: relative;
+  margin: 2px;
+}
+
+.theater__seat--available {
+  background-color: #4CAF50; /* Green */
+}
+
+.theater__seat--selected {
+  background-color: #2196F3; /* Blue for current user's selections */
+}
+
+.theater__seat--occupied {
+  background-color: #F44336; /* Red for other users' selections */
+  cursor: not-allowed;
+}
+
+/* Add a hover effect only for available seats */
+.theater__seat--available:hover {
+  transform: scale(1.1);
+  box-shadow: 0 0 5px rgba(0,0,0,0.3);
+}
+
+/* Optional: Add hover effects for VIP sofas */
+.theater__vip-sofa {
+  transition: transform 0.3s ease;
+}
+
+.theater__vip-sofa:hover {
+  transform: scale(1.05);
+}
+
+/* Add these styles for the footer */
+.theater__footer {
+  width: 100%;
+  padding: 20px;
+  margin-top: 40px;
+  text-align: center;
+  background: linear-gradient(to right, transparent, rgba(255, 215, 0, 0.1), transparent);
+}
+
+.theater__credit {
+  font-size: 16px;
+  color: #FFD700;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  font-weight: 500;
+}
+
+.theater__credit-link {
+  color: #FFD700;
+  text-decoration: none;
+  position: relative;
+  font-weight: bold;
+  transition: all 0.3s ease;
+}
+
+.theater__credit-link::after {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 2px;
+  bottom: -2px;
+  left: 0;
+  background: #FFD700;
+  transform: scaleX(0);
+  transform-origin: right;
+  transition: transform 0.3s ease;
+}
+
+.theater__credit-link:hover {
+  color: #FFF;
+  text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+}
+
+.theater__credit-link:hover::after {
+  transform: scaleX(1);
+  transform-origin: left;
 } 

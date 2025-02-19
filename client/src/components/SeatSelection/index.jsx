@@ -1,16 +1,31 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import io from 'socket.io-client';
-import Seat from '../Seat';
 import './styles.css';
 
-const socket = io('http://YOUR_LOCAL_IP:3001');
-const userId = Math.random().toString(36).substr(2, 9);
+// Create socket instance outside component to prevent multiple connections
+const socket = io('https://seat-selection-app.onrender.com', {
+  transports: ['websocket', 'polling'], // Allow fallback to polling
+  reconnection: true,
+  reconnectionAttempts: Infinity,
+  reconnectionDelay: 1000,
+  reconnectionDelayMax: 5000,
+  timeout: 20000
+});
 
 const SeatSelection = () => {
-  const [selectedSeats, setSelectedSeats] = useState([]);
-  const [occupiedSeats, setOccupiedSeats] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [connected, setConnected] = useState(false);
+  const [selectedSeats, setSelectedSeats] = useState(new Set());
+  const [occupiedSeats, setOccupiedSeats] = useState(new Map());
+
+  const [lockedSeats, setLockedSeats] = useState(new Map()); // Store seat timers
+  const [timeLeft, setTimeLeft] = useState(new Map());
+  const [viewedSeats, setViewedSeats] = useState(new Set());
+  const [isLoading, setIsLoading] = useState(true);
+  const [connectionStatus, setConnectionStatus] = useState('connecting');
+  const [lastUpdate, setLastUpdate] = useState(null);
+  const [userId, setUserId] = useState(() => {
+    // Load from localStorage on initial render
+    return localStorage.getItem('userId') || null;
+  });
 
   // Update front section layout with optimized spacing
   const frontSection = [
@@ -41,51 +56,273 @@ const SeatSelection = () => {
   const TOTAL_SEATS = FRONT_SECTION_TOTAL + MAIN_SECTION_TOTAL;
 
   useEffect(() => {
-    // Add connection event handlers
-    socket.on('connect', () => {
+    // Save to localStorage whenever state changes
+    localStorage.setItem('selectedSeats', JSON.stringify([...selectedSeats]));
+  }, [selectedSeats]);
+
+  useEffect(() => {
+    // Save to localStorage whenever state changes
+    localStorage.setItem('occupiedSeats', JSON.stringify([...occupiedSeats]));
+  }, [occupiedSeats]);
+
+  useEffect(() => {
+    // Save userId to localStorage
+    if (userId) {
+      localStorage.setItem('userId', userId);
+    }
+  }, [userId]);
+
+  useEffect(() => {
+    function handleConnect() {
       console.log('Connected to server');
-      setConnected(true);
+      setConnectionStatus('connected');
+      setIsLoading(false);
+    }
+
+    function handleDisconnect() {
+      console.log('Disconnected from server');
+      setConnectionStatus('disconnected');
+    }
+
+    function handleReconnect() {
+      console.log('Reconnecting...');
+      setConnectionStatus('reconnecting');
+    }
+
+    function handleInitialSeats(seats) {
+      console.log('Received initial seats:', seats);
+      const occupied = new Map();
+      Object.entries(seats).forEach(([seatId, data]) => {
+        if (data.status === 'selected') {
+          occupied.set(seatId, data.userId);
+        }
+      });
+      setOccupiedSeats(occupied);
+      localStorage.setItem('occupiedSeats', JSON.stringify([...occupied]));
+      setIsLoading(false);
+    }
+
+    function handleSeatUpdate({ seatId, status, userId: seatUserId, timestamp }) {
+      console.log(`Seat ${seatId} updated to ${status} by ${seatUserId}`);
+      setLastUpdate(new Date().toLocaleTimeString());
+
+      if (status === 'selected') {
+        setSelectedSeats(prev => new Set([...prev, seatId]));
+        setOccupiedSeats(prev => new Map(prev).set(seatId, seatUserId));
+
+        // Handle timer if needed
+        if (timestamp) {
+          const endTime = timestamp + 60000;
+          setLockedSeats(prev => new Map(prev).set(seatId, endTime));
+          
+          const timer = setInterval(() => {
+            const now = Date.now();
+            const remaining = Math.max(0, endTime - now);
+            
+            setTimeLeft(prev => new Map(prev).set(seatId, remaining));
+            
+            if (remaining <= 0) {
+              clearInterval(timer);
+            }
+          }, 1000);
+        }
+
+        // Add visual feedback
+        const seatElement = document.querySelector(`[data-seat-id="${seatId}"]`);
+        if (seatElement) {
+          seatElement.classList.add('theater__seat--updating');
+          setTimeout(() => {
+            seatElement.classList.remove('theater__seat--updating');
+          }, 500);
+        }
+      } else {
+        setSelectedSeats(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(seatId);
+          return newSet;
+        });
+        setOccupiedSeats(prev => {
+          const newOccupied = new Map(prev);
+          newOccupied.delete(seatId);
+          return newOccupied;
+        });
+        setLockedSeats(prev => {
+          const newLocked = new Map(prev);
+          newLocked.delete(seatId);
+          return newLocked;
+        });
+        setTimeLeft(prev => {
+          const newTime = new Map(prev);
+          newTime.delete(seatId);
+          return newTime;
+        });
+      }
+    }
+
+    socket.on('connect', handleConnect);
+    socket.on('disconnect', handleDisconnect);
+    socket.on('reconnect_attempt', handleReconnect);
+    socket.on('initializeSeats', handleInitialSeats);
+    socket.on('seatUpdated', handleSeatUpdate);
+    socket.on('seatError', ({ seatId, message }) => {
+      alert(message);
+      setSelectedSeats(prev => {
+        const newSelected = new Set(prev);
+        newSelected.delete(seatId);
+        return newSelected;
+      });
     });
 
-    socket.on('connect_error', (error) => {
-      console.error('Connection error:', error);
-      setLoading(false);
+    // Add heartbeat response
+    socket.on('ping', () => {
+      socket.emit('pong');
     });
 
-    socket.on('initializeSeats', (data) => {
-      console.log('Received initial seat data:', data);
-      setSelectedSeats(data.selectedSeats);
-      setOccupiedSeats(data.occupiedSeats);
-      setLoading(false);
+    // Add reconnection handlers
+    socket.io.on('reconnect_attempt', () => {
+      console.log('Attempting to reconnect...');
+      setConnectionStatus('reconnecting');
     });
 
-    socket.on('seatUpdated', (data) => {
-      console.log('Received seat update:', data);
-      setSelectedSeats(data.selectedSeats);
-      setOccupiedSeats(data.occupiedSeats);
+    socket.io.on('reconnect', () => {
+      console.log('Reconnected successfully!');
+      setConnectionStatus('connected');
+      // Request fresh data after reconnection
+      socket.emit('requestInitialState');
+    });
+
+    socket.io.on('reconnect_error', (error) => {
+      console.error('Reconnection error:', error);
+      setConnectionStatus('error');
+    });
+
+    socket.io.on('reconnect_failed', () => {
+      console.error('Failed to reconnect');
+      setConnectionStatus('failed');
+    });
+
+    socket.on('seatLocked', ({ seatId }) => {
+      setLockedSeats(prev => new Map(prev).set(seatId, Date.now()));
+      alert(`Seat ${seatId} has been locked`);
+    });
+
+    // Store user ID when connected
+    socket.on('connect', () => {
+      const newUserId = socket.id;
+      setUserId(newUserId);
+      localStorage.setItem('userId', newUserId);
     });
 
     return () => {
-      socket.off('connect');
-      socket.off('connect_error');
-      socket.off('initializeSeats');
-      socket.off('seatUpdated');
+      socket.off('connect', handleConnect);
+      socket.off('disconnect', handleDisconnect);
+      socket.off('reconnect_attempt', handleReconnect);
+      socket.off('initializeSeats', handleInitialSeats);
+      socket.off('seatUpdated', handleSeatUpdate);
+      socket.off('seatError');
+      socket.off('seatLocked');
+      socket.off("reconnect_attempt");
+      socket.off("reconnect");
     };
   }, []);
 
-  const handleSeatSelect = useCallback((seatId) => {
-    socket.emit('selectSeat', { seatId, userId });
-  }, []);
+  useEffect(() => {
+    // Cleanup function when component unmounts
+    return () => {
+      const userSeats = Array.from(occupiedSeats.entries())
+        .filter(([_, seatUserId]) => seatUserId === userId)
+        .map(([seatId]) => seatId);
 
-  const renderSeat = (seatId) => (
-    <Seat
-      key={seatId}
-      id={seatId}
-      isSelected={selectedSeats.includes(seatId)}
-      isOccupied={occupiedSeats.includes(seatId)}
-      onSelect={handleSeatSelect}
-    />
-  );
+      // Release seats held by this user
+      userSeats.forEach(seatId => {
+        socket.emit('deselectSeat', seatId);
+      });
+    };
+  }, [occupiedSeats, userId]);
+
+  const handleSeatClick = (seatId) => {
+    if (occupiedSeats.has(seatId) && occupiedSeats.get(seatId) !== userId) {
+      return; // Seat is taken by someone else
+    }
+
+    const isSelected = selectedSeats.has(seatId);
+    
+    if (!isSelected) {
+      // Selecting a seat
+      socket.emit('updateSeat', {
+        seatId,
+        status: 'selected',
+        userId,
+        timestamp: Date.now(),
+      });
+
+      setSelectedSeats(prev => {
+        const newSelected = new Set(prev);
+        newSelected.add(seatId);
+        return newSelected;
+      });
+
+      setOccupiedSeats(prev => {
+        const newOccupied = new Map(prev);
+        newOccupied.set(seatId, userId);
+        return newOccupied;
+      });
+    } else {
+      // Deselecting a seat
+      socket.emit('updateSeat', {
+        seatId,
+        status: 'available',
+        userId,
+      });
+
+      setSelectedSeats(prev => {
+        const newSelected = new Set(prev);
+        newSelected.delete(seatId);
+        return newSelected;
+      });
+
+      setOccupiedSeats(prev => {
+        const newOccupied = new Map(prev);
+        newOccupied.delete(seatId);
+        return newOccupied;
+      });
+    }
+  };
+
+  const getSeatStatus = useCallback((seatId) => {
+    const occupiedByUserId = occupiedSeats.get(seatId);
+    if (occupiedByUserId) {
+      return occupiedByUserId === userId ? 'selected' : 'occupied';
+    }
+    return 'available';
+  }, [occupiedSeats, userId]);
+
+  const renderSeat = (seatId) => {
+    const status = getSeatStatus(seatId);
+    const remaining = timeLeft.get(seatId);
+    const isLocked = lockedSeats.has(seatId);
+    
+    return (
+      <div className="theater__seat-container" key={seatId}>
+        <button
+          className={`theater__seat theater__seat--${status} 
+            ${selectedSeats.has(seatId) ? 'theater__seat--selected' : ''}
+            ${isLocked ? 'theater__seat--locked' : ''}
+          `}
+          onClick={() => handleSeatClick(seatId)}
+          disabled={status === 'occupied' || isLocked}
+          data-seat-id={seatId}
+        >
+          {seatId}
+        </button>
+        {remaining > 0 && (
+          <div className="theater__seat-timer">
+            {Math.ceil(remaining / 1000)}s
+          </div>
+        )}
+      </div>
+    );
+  };
 
   // Optimize offset calculation
   const calculateOffset = (baseOffset) => {
@@ -93,26 +330,157 @@ const SeatSelection = () => {
     return `${baseOffset * baseSize}px`;
   };
 
+  const renderFrontSection = () => {
+    return (
+      <div className="theater__section">
+        <h2 className="theater__section-title">FRONT SECTION</h2>
+        <div className="theater__grid">
+          {frontSection.map(row => (
+            <div key={row.row} className="theater__row">
+              <span className="theater__row-label">{row.row}</span>
+              <div className="theater__seats">
+                {Array.from({ length: row.seats }, (_, i) => {
+                  const seatId = `${row.row}${i + 1}`;
+                  return renderSeat(seatId);
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  const renderMainSection = () => {
+    // Define row configurations with both gap positions
+    const mainSectionConfig = {
+      'G': { total: 27, leftGap: 6, middleGap: 21 },
+      'H': { total: 28, leftGap: 6, middleGap: 22 },
+      'I': { total: 27, leftGap: 6, middleGap: 21 },
+      'J': { total: 28, leftGap: 6, middleGap: 22 },
+      'K': { total: 27, leftGap: 6, middleGap: 21 },
+      'L': { total: 28, leftGap: 6, middleGap: 22 },
+      'M': { total: 27, leftGap: 6, middleGap: 21 },
+      'N': { total: 28, leftGap: 6, middleGap: 22 },
+      'O': { total: 27, leftGap: 6, middleGap: 21 },
+      'P': { total: 28, leftGap: 6, middleGap: 22 },
+      'Q': { total: 27, leftGap: 6, middleGap: 21 },
+      'R': { total: 28, leftGap: 6, middleGap: 22 },
+      'S': { total: 27, leftGap: 6, middleGap: 21 },
+      'T': { total: 16, leftGap: null, middleGap: null } // T row is centered
+    };
+
+    return (
+      <div className="theater__section">
+        <h2 className="theater__section-title">MAIN SECTION</h2>
+        <div className="theater__grid">
+          {Object.entries(mainSectionConfig).map(([row, config]) => (
+            <div key={row} className="theater__row">
+              <span className="theater__row-label">{row}</span>
+              <div className="theater__seats">
+                {/* First section (before first gap) */}
+                {Array.from({ length: config.leftGap || 0 }, (_, i) => {
+                  const seatNumber = i + 1;
+                  const seatId = `${row}${seatNumber}`;
+                  return renderSeat(seatId);
+                })}
+
+                {/* First gap (after 6 seats) */}
+                {config.leftGap && <div className="theater__seat-gap" />}
+
+                {/* Middle section (between gaps) */}
+                {Array.from(
+                  { length: config.middleGap ? config.middleGap - config.leftGap : config.total }, 
+                  (_, i) => {
+                    const seatNumber = (config.leftGap || 0) + i + 1;
+                    const seatId = `${row}${seatNumber}`;
+                    return renderSeat(seatId);
+                  }
+                )}
+
+                {/* Second gap (after 21/22 seats) */}
+                {config.middleGap && <div className="theater__seat-gap" />}
+
+                {/* Last section */}
+                {config.middleGap && Array.from(
+                  { length: config.total - config.middleGap }, 
+                  (_, i) => {
+                    const seatNumber = config.middleGap + i + 1;
+                    const seatId = `${row}${seatNumber}`;
+                    return renderSeat(seatId);
+                  }
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  const renderVIPSofas = () => {
+    return (
+      <div className="theater__vip-section">
+        {[1, 2, 3].map(sofaNum => (
+          <div key={`sofa-${sofaNum}`} className="theater__vip-sofa">
+            <div className="theater__vip-label">Guest</div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  if (connectionStatus === 'disconnected') {
+    return (
+      <div className="theater__error">
+        <h2>Connection Error</h2>
+        <p>Disconnected from server. Please refresh the page.</p>
+        <button onClick={() => window.location.reload()}>
+          Retry Connection
+        </button>
+      </div>
+    );
+  }
+
+  if (connectionStatus === 'reconnecting') {
+    return (
+      <div className="theater__loading">
+        <div className="theater__loading-spinner"></div>
+        <p>Reconnecting to server...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="theater__seating">
-      <h1 className="theater__title">PVC Badge Ceremony</h1>
+      <h1 className="theater__title">PVC BADGE CEREMONY - Seating Arrangement</h1>
       
+      <div className="theater__status">
+        <div className="theater__connection-status">
+          {connectionStatus === 'connected' ? 
+            <span className="status-connected">Connected</span> : 
+            <span className="status-disconnected">Disconnected</span>
+          }
+        </div>
+        {lastUpdate && <span className="last-update">Last update: {lastUpdate}</span>}
+      </div>
+
       <div className="theater__counter-section">
         <div className="theater__counter-card">
           <div className="theater__counter-value">{TOTAL_SEATS}</div>
-          <div className="theater__counter-label">Total Seats</div>
+          <div className="theater__counter-label">TOTAL SEATS</div>
         </div>
         <div className="theater__counter-card">
-          <div className="theater__counter-value">{TOTAL_SEATS - occupiedSeats.length}</div>
-          <div className="theater__counter-label">Available</div>
+          <div className="theater__counter-value">{TOTAL_SEATS - occupiedSeats.size}</div>
+          <div className="theater__counter-label">AVAILABLE</div>
         </div>
         <div className="theater__counter-card">
-          <div className="theater__counter-value">{selectedSeats.length}</div>
-          <div className="theater__counter-label">Selected</div>
+          <div className="theater__counter-value">{selectedSeats.size}</div>
+          <div className="theater__counter-label">SELECTED</div>
         </div>
         <div className="theater__counter-card">
-          <div className="theater__counter-value">{occupiedSeats.length}</div>
-          <div className="theater__counter-label">Occupied</div>
+          <div className="theater__counter-value">{occupiedSeats.size}</div>
+          <div className="theater__counter-label">OCCUPIED</div>
         </div>
       </div>
 
@@ -120,82 +488,11 @@ const SeatSelection = () => {
         <div className="theater__stage">STAGE</div>
       </div>
 
-      {loading ? (
-        <div className="theater__loading">
-          <div className="theater__loading-spinner"></div>
-          <div className="theater__loading-text">Loading seating arrangement...</div>
-        </div>
-      ) : (
-        <>
-          {/* Front Section */}
-          <div className="theater__section">
-            <h2 className="theater__section-title">Front Section</h2>
-            <div className="theater__grid">
-              {frontSection.map(row => (
-                <div key={row.row} className="theater__row">
-                  <div className="theater__row-label">{row.row}</div>
-                  <div 
-                    className="theater__seats-container"
-                    style={{ 
-                      paddingLeft: calculateOffset(row.offset),
-                      transform: `translateX(-${calculateOffset(row.offset/2)})`
-                    }}
-                  >
-                    {Array.from({ length: row.seats }, (_, i) => 
-                      renderSeat(`${row.row}${i + 1}`)
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+      {renderVIPSofas()}
 
-          {/* Main Section */}
-          <div className="theater__section">
-            <h2 className="theater__section-title">Main Section</h2>
-            <div className="theater__grid">
-              {mainSection.map((row, index) => (
-                <div key={index} className="theater__combined-row">
-                  {/* Left Side */}
-                  {row.leftSide && (
-                    <div className="theater__side-section left">
-                      <div className="theater__row-label">{`L${index + 1}`}</div>
-                      <div className="theater__seats-container">
-                        {Array.from({ length: row.leftSide.seats }, (_, i) =>
-                          renderSeat(`L${index + 1}-${i + 1}`)
-                        )}
-                      </div>
-                    </div>
-                  )}
+      {renderFrontSection()}
+      {renderMainSection()}
 
-                  {/* Middle */}
-                  <div className="theater__middle-section">
-                    <div className="theater__row-label">{row.middle.row}</div>
-                    <div className="theater__seats-container">
-                      {Array.from({ length: row.middle.seats }, (_, i) =>
-                        renderSeat(`${row.middle.row}-${i + 1}`)
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Right Side */}
-                  {row.rightSide && (
-                    <div className="theater__side-section right">
-                      <div className="theater__row-label">{`R${index + 1}`}</div>
-                      <div className="theater__seats-container">
-                        {Array.from({ length: row.rightSide.seats }, (_, i) =>
-                          renderSeat(`R${index + 1}-${i + 1}`)
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        </>
-      )}
-      
       <div className="theater__legend">
         <div className="theater__legend-item">
           <div className="theater__seat theater__seat--available"></div>
@@ -210,6 +507,20 @@ const SeatSelection = () => {
           <span>Occupied</span>
         </div>
       </div>
+
+      <footer className="theater__footer">
+        <p className="theater__credit">
+          Designed & Developed by{' '}
+          <a 
+            href="https://www.linkedin.com/in/shivansh-tiwari-48894924a/" 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            className="theater__credit-link"
+          >
+            Shivansh Tiwari
+          </a>
+        </p>
+      </footer>
     </div>
   );
 };
