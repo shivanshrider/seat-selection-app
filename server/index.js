@@ -4,24 +4,25 @@ import { Server } from 'socket.io';
 import cors from 'cors';
 
 const app = express();
-app.use(cors({
-  origin: '*',
-  methods: ['GET', 'POST'],
-  credentials: true
-}));
+
+// More permissive CORS configuration
+app.use(cors());
 
 const server = createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: "*",  // Allow all origins temporarily for testing
+    origin: "*",  // Allow all origins temporarily
     methods: ["GET", "POST"],
-    credentials: true
+    credentials: false,  // Changed to false
+    allowedHeaders: ["*"]
   },
-  transports: ['websocket', 'polling']
+  transports: ['websocket', 'polling'],
+  pingTimeout: 60000,
+  pingInterval: 25000
 });
 
-// Add a health check endpoint
+// Health check endpoint
 app.get('/', (req, res) => {
   res.send('Server is running');
 });
@@ -98,6 +99,10 @@ io.on('connection', (socket) => {
 
   socket.on('disconnect', () => {
     console.log('Client disconnected:', socket.id);
+  });
+
+  socket.on('error', (error) => {
+    console.error('Socket error:', error);
   });
 });
 
