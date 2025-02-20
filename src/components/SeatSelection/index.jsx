@@ -4,8 +4,8 @@ import Seat from '../Seat';
 import SeatSummary from '../SeatSummary';
 import './styles.css';
 
-// Get the URL from environment variables
-const SOCKET_URL = 'https://pvc-badge-ceremony.onrender.com';
+// Get the URL from environment variables, fallback to Render URL
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'https://pvc-badge-ceremony.onrender.com';
 
 const userId = Math.random().toString(36).substr(2, 9); // Generate random user ID (use actual auth in production)
 
@@ -58,26 +58,29 @@ const SeatSelection = () => {
 
   // Initialize socket connection and event listeners
   useEffect(() => {
-    console.log('Attempting to connect to:', SOCKET_URL);
+    console.log('Connecting to socket server at:', SOCKET_URL);
     
     const newSocket = io(SOCKET_URL, {
       transports: ['websocket', 'polling'],
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,
       timeout: 20000,
-      withCredentials: false,  // Changed to false
-      forceNew: true
+      withCredentials: false,
+      forceNew: true,
+      path: '/socket.io'
     });
 
     newSocket.on('connect', () => {
-      console.log('Connected to server');
+      console.log('Successfully connected to server');
       setConnectionStatus('connected');
+      setError(null);
       setSocket(newSocket);
     });
 
     newSocket.on('connect_error', (error) => {
-      console.error('Connection error:', error.message);
+      console.error('Socket connection error:', error);
       setConnectionStatus('error');
+      setError(error.message);
     });
 
     newSocket.on('disconnect', () => {
@@ -122,7 +125,7 @@ const SeatSelection = () => {
 
     return () => {
       if (newSocket) {
-        console.log('Cleaning up socket connection');
+        console.log('Closing socket connection');
         newSocket.close();
       }
     };
@@ -186,13 +189,17 @@ const SeatSelection = () => {
     );
   };
 
+  if (connectionStatus === 'connecting') {
+    return <div>Loading seating arrangement...</div>;
+  }
+
+  if (connectionStatus === 'error') {
+    return <div>Unable to connect to server. Error: {error}</div>;
+  }
+
   return (
     <div className="theater__seating">
-      {connectionStatus === 'error' ? (
-        <div className="theater__error">
-          Unable to connect to server. Please refresh the page or try again later.
-        </div>
-      ) : loading ? (
+      {loading ? (
         <div className="theater__loading">
           <div className="theater__loading-spinner"></div>
           <div className="theater__loading-text">Loading seating arrangement...</div>
