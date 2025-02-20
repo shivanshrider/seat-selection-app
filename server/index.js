@@ -29,61 +29,37 @@ app.get('/', (req, res) => {
 // Persistent storage for seats
 let seatStates = new Map();
 
-// Save seat data periodically
+// Save seat data
 const saveSeatData = () => {
-  const seatData = Array.from(seatStates.entries());
-  // You could also save this to a database
-  console.log('Seat data saved:', seatData);
+  // Implementation for saving seat data
+  console.log('Saving seat data...');
 };
-
-// Load initial seat data
-const loadSeatData = () => {
-  try {
-    // You could load from a database here
-    return new Map();
-  } catch (error) {
-    console.error('Error loading seat data:', error);
-    return new Map();
-  }
-};
-
-// Load saved data on server start
-seatStates = loadSeatData();
 
 io.on('connection', (socket) => {
   console.log('Client connected:', socket.id);
-  
-  socket.on('disconnect', () => {
-    console.log('Client disconnected:', socket.id);
-    // Clear only this user's seats
-    for (const [seatId, data] of seatStates.entries()) {
-      if (data.userId === socket.id) {
-        seatStates.delete(seatId);
-        io.emit('seatUpdated', {
-          seatId,
-          status: 'available'
-        });
-      }
-    }
-  });
 
-  // Send current state to new client
-  socket.emit('initializeSeats', Array.from(seatStates.entries()).reduce((acc, [key, value]) => {
-    acc[key] = value;
-    return acc;
-  }, {}));
+  // Send current seat states to new client
+  for (const [seatId, data] of seatStates.entries()) {
+    socket.emit('seatUpdated', {
+      seatId,
+      status: 'selected',
+      userId: data.userId
+    });
+  }
 
   socket.on('selectSeat', (seatId) => {
     const seatData = seatStates.get(seatId);
-
-    // Check if seat is already taken by another user
-    if (seatData && seatData.userId !== socket.id) {
-      return; // Silently fail instead of sending error
+    
+    if (seatData) {
+      socket.emit('seatError', { 
+        seatId, 
+        message: 'Seat already taken' 
+      });
+      return;
     }
 
-    // Update seat state
+    // Store the selection
     seatStates.set(seatId, {
-      status: 'selected',
       userId: socket.id
     });
 
@@ -112,7 +88,16 @@ io.on('connection', (socket) => {
         seatId,
         status: 'available'
       });
+    } else {
+      socket.emit('seatError', { 
+        seatId, 
+        message: 'You can only deselect your own seats' 
+      });
     }
+  });
+
+  socket.on('disconnect', () => {
+    console.log('Client disconnected:', socket.id);
   });
 });
 
