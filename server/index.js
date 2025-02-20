@@ -4,58 +4,122 @@ import { Server } from 'socket.io';
 import cors from 'cors';
 
 const app = express();
-app.use(cors());
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST'],
+  credentials: true
+}));
 
 const server = createServer(app);
+
 const io = new Server(server, {
   cors: {
-    origin: "*", // Be more specific in production
-    methods: ["GET", "POST"]
-  }
+    origin: "*",  // Allow all origins temporarily for testing
+    methods: ["GET", "POST"],
+    credentials: true
+  },
+  transports: ['websocket', 'polling']
 });
 
-// Store seat states
-let seatStates = {};
+// Add a health check endpoint
+app.get('/', (req, res) => {
+  res.send('Server is running');
+});
+
+// Persistent storage for seats
+let seatStates = new Map();
+
+// Save seat data periodically
+const saveSeatData = () => {
+  const seatData = Array.from(seatStates.entries());
+  // You could also save this to a database
+  console.log('Seat data saved:', seatData);
+};
+
+// Load initial seat data
+const loadSeatData = () => {
+  try {
+    // You could load from a database here
+    return new Map();
+  } catch (error) {
+    console.error('Error loading seat data:', error);
+    return new Map();
+  }
+};
+
+// Load saved data on server start
+seatStates = loadSeatData();
 
 io.on('connection', (socket) => {
-  console.log('User connected:', socket.id);
+  console.log('Client connected:', socket.id);
   
-  // Send current seat states to new connections
-  socket.emit('initializeSeats', seatStates);
+  socket.on('disconnect', () => {
+    console.log('Client disconnected:', socket.id);
+    // Clear only this user's seats
+    for (const [seatId, data] of seatStates.entries()) {
+      if (data.userId === socket.id) {
+        seatStates.delete(seatId);
+        io.emit('seatUpdated', {
+          seatId,
+          status: 'available'
+        });
+      }
+    }
+  });
 
-  // Handle seat selection
+  // Send current state to new client
+  socket.emit('initializeSeats', Array.from(seatStates.entries()).reduce((acc, [key, value]) => {
+    acc[key] = value;
+    return acc;
+  }, {}));
+
   socket.on('selectSeat', (seatId) => {
-    seatStates[seatId] = {
+    const seatData = seatStates.get(seatId);
+
+    // Check if seat is already taken by another user
+    if (seatData && seatData.userId !== socket.id) {
+      return; // Silently fail instead of sending error
+    }
+
+    // Update seat state
+    seatStates.set(seatId, {
       status: 'selected',
       userId: socket.id
-    };
-    // Broadcast to all clients
-    io.emit('seatUpdated', { seatId, status: 'selected', userId: socket.id });
-  });
-
-  // Handle seat deselection
-  socket.on('deselectSeat', (seatId) => {
-    delete seatStates[seatId];
-    // Broadcast to all clients
-    io.emit('seatUpdated', { seatId, status: 'available' });
-  });
-
-  // Handle disconnection
-  socket.on('disconnect', () => {
-    console.log('User disconnected:', socket.id);
-    // Clear seats selected by disconnected user
-    Object.entries(seatStates).forEach(([seatId, state]) => {
-      if (state.userId === socket.id) {
-        delete seatStates[seatId];
-        io.emit('seatUpdated', { seatId, status: 'available' });
-      }
     });
+
+    // Save the updated state
+    saveSeatData();
+
+    // Broadcast update to all clients
+    io.emit('seatUpdated', {
+      seatId,
+      status: 'selected',
+      userId: socket.id
+    });
+  });
+
+  socket.on('deselectSeat', (seatId) => {
+    const seatData = seatStates.get(seatId);
+    
+    // Only allow deselection by the user who selected it
+    if (seatData && seatData.userId === socket.id) {
+      seatStates.delete(seatId);
+      
+      // Save the updated state
+      saveSeatData();
+
+      io.emit('seatUpdated', {
+        seatId,
+        status: 'available'
+      });
+    }
   });
 });
 
-const PORT = process.env.PORT || 3001;
-const HOST = '0.0.0.0'; // Listen on all network interfaces
+// Save data periodically (every 5 minutes)
+setInterval(saveSeatData, 5 * 60 * 1000);
 
-server.listen(PORT, HOST, () => {
-  console.log(`Server running on http://${HOST}:${PORT}`);
+const PORT = process.env.PORT || 3001;
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server running on port ${PORT}`);
 }); 
