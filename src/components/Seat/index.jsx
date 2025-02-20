@@ -1,17 +1,24 @@
 import React from 'react';
 import './styles.css';
 
-const Seat = ({ id, isSelected, onSelect }) => {
-  const seatClass = `theater__seat ${
-    isSelected ? 'theater__seat--selected' : 'theater__seat--available'
+const Seat = ({ id, isSelected, isOccupied, onSelect }) => {
+  const handleClick = () => {
+    if (!isOccupied) {
+      onSelect(id);
+    }
+  };
+
+  const className = `theater__seat ${
+    isSelected ? 'theater__seat--selected' : 
+    isOccupied ? 'theater__seat--occupied' : 
+    'theater__seat--available'
   }`;
 
   return (
     <button 
-      className={seatClass}
-      onClick={() => onSelect(id)}
-      aria-label={`Seat ${id} ${isSelected ? 'selected' : 'available'}`}
-      title={`Seat ${id}`}
+      className={className}
+      onClick={handleClick}
+      disabled={isOccupied}
     >
       <span className="theater__seat-number">{id}</span>
     </button>

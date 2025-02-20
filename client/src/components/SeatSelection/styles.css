@@ -211,7 +211,7 @@
 }
 
 /* Improve timer visibility */
-.theater__seat-timer {
+/* .theater__seat-timer {
   position: absolute;
   top: -20px;
   left: 50%;
@@ -223,7 +223,7 @@
   font-size: 12px;
   white-space: nowrap;
   z-index: 1;
-}
+} */
 
 /* Center the T row */
 .theater__row:last-child .theater__seats {

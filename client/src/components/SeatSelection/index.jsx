@@ -1,24 +1,11 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import io from 'socket.io-client';
+import Seat from '../Seat';
 import './styles.css';
-
-// Create socket instance outside component to prevent multiple connections
-const socket = io('https://seat-selection-app.onrender.com', {
-  transports: ['websocket', 'polling'], // Allow fallback to polling
-  reconnection: true,
-  reconnectionAttempts: Infinity,
-  reconnectionDelay: 1000,
-  reconnectionDelayMax: 5000,
-  timeout: 20000
-});
 
 const SeatSelection = () => {
   const [selectedSeats, setSelectedSeats] = useState(new Set());
   const [occupiedSeats, setOccupiedSeats] = useState(new Map());
-
-  const [lockedSeats, setLockedSeats] = useState(new Map()); // Store seat timers
-  const [timeLeft, setTimeLeft] = useState(new Map());
-  const [viewedSeats, setViewedSeats] = useState(new Set());
   const [isLoading, setIsLoading] = useState(true);
   const [connectionStatus, setConnectionStatus] = useState('connecting');
   const [lastUpdate, setLastUpdate] = useState(null);
@@ -26,6 +13,7 @@ const SeatSelection = () => {
     // Load from localStorage on initial render
     return localStorage.getItem('userId') || null;
   });
+  const [socket, setSocket] = useState(null);
 
   // Update front section layout with optimized spacing
   const frontSection = [
@@ -72,222 +60,125 @@ const SeatSelection = () => {
     }
   }, [userId]);
 
+  // Initialize socket connection
   useEffect(() => {
-    function handleConnect() {
-      console.log('Connected to server');
-      setConnectionStatus('connected');
-      setIsLoading(false);
-    }
-
-    function handleDisconnect() {
-      console.log('Disconnected from server');
+    let newSocket;
+    try {
+      newSocket = io(process.env.REACT_APP_SOCKET_URL || 'http://localhost:3001', {
+        transports: ['websocket', 'polling'],
+        reconnection: true,
+        reconnectionDelay: 1000,
+        reconnectionDelayMax: 5000,
+        reconnectionAttempts: 5
+      });
+      setSocket(newSocket);
+    } catch (error) {
+      console.error('Socket connection error:', error);
       setConnectionStatus('disconnected');
     }
 
-    function handleReconnect() {
-      console.log('Reconnecting...');
-      setConnectionStatus('reconnecting');
-    }
+    return () => {
+      if (newSocket) {
+        // Clean up any selected seats before disconnecting
+        const userSeats = Array.from(occupiedSeats.entries())
+          .filter(([_, seatUserId]) => seatUserId === userId)
+          .map(([seatId]) => seatId);
 
-    function handleInitialSeats(seats) {
-      console.log('Received initial seats:', seats);
-      const occupied = new Map();
-      Object.entries(seats).forEach(([seatId, data]) => {
-        if (data.status === 'selected') {
-          occupied.set(seatId, data.userId);
-        }
-      });
-      setOccupiedSeats(occupied);
-      localStorage.setItem('occupiedSeats', JSON.stringify([...occupied]));
-      setIsLoading(false);
-    }
-
-    function handleSeatUpdate({ seatId, status, userId: seatUserId, timestamp }) {
-      console.log(`Seat ${seatId} updated to ${status} by ${seatUserId}`);
-      setLastUpdate(new Date().toLocaleTimeString());
-
-      if (status === 'selected') {
-        setSelectedSeats(prev => new Set([...prev, seatId]));
-        setOccupiedSeats(prev => new Map(prev).set(seatId, seatUserId));
-
-        // Handle timer if needed
-        if (timestamp) {
-          const endTime = timestamp + 60000;
-          setLockedSeats(prev => new Map(prev).set(seatId, endTime));
-          
-          const timer = setInterval(() => {
-            const now = Date.now();
-            const remaining = Math.max(0, endTime - now);
-            
-            setTimeLeft(prev => new Map(prev).set(seatId, remaining));
-            
-            if (remaining <= 0) {
-              clearInterval(timer);
-            }
-          }, 1000);
-        }
-
-        // Add visual feedback
-        const seatElement = document.querySelector(`[data-seat-id="${seatId}"]`);
-        if (seatElement) {
-          seatElement.classList.add('theater__seat--updating');
-          setTimeout(() => {
-            seatElement.classList.remove('theater__seat--updating');
-          }, 500);
-        }
-      } else {
-        setSelectedSeats(prev => {
-          const newSet = new Set(prev);
-          newSet.delete(seatId);
-          return newSet;
+        userSeats.forEach(seatId => {
+          newSocket.emit('deselectSeat', seatId);
         });
-        setOccupiedSeats(prev => {
-          const newOccupied = new Map(prev);
-          newOccupied.delete(seatId);
-          return newOccupied;
-        });
-        setLockedSeats(prev => {
-          const newLocked = new Map(prev);
-          newLocked.delete(seatId);
-          return newLocked;
-        });
-        setTimeLeft(prev => {
-          const newTime = new Map(prev);
-          newTime.delete(seatId);
-          return newTime;
-        });
+        
+        newSocket.disconnect();
       }
-    }
+    };
+  }, []); // Run once on mount
+
+  // Update socket event listeners when socket changes
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleConnect = () => {
+      console.log('Connected to server');
+      setConnectionStatus('connected');
+      setIsLoading(false);
+    };
+
+    const handleDisconnect = () => {
+      console.log('Disconnected from server');
+      setConnectionStatus('disconnected');
+    };
+
+    const handleSeatUpdate = ({ seatId, status, userId: seatUserId }) => {
+      setLastUpdate(new Date().toLocaleTimeString());
+      try {
+        if (status === 'selected') {
+          setOccupiedSeats(prev => new Map(prev).set(seatId, seatUserId));
+          if (seatUserId === socket.id) {
+            setSelectedSeats(prev => {
+              const newSelected = new Set(prev);
+              newSelected.add(seatId);
+              return newSelected;
+            });
+          }
+        } else if (status === 'available') {
+          setOccupiedSeats(prev => {
+            const newMap = new Map(prev);
+            newMap.delete(seatId);
+            return newMap;
+          });
+          setSelectedSeats(prev => {
+            const newSelected = new Set(prev);
+            newSelected.delete(seatId);
+            return newSelected;
+          });
+        }
+      } catch (error) {
+        console.error('Error handling seat update:', error);
+      }
+    };
 
     socket.on('connect', handleConnect);
     socket.on('disconnect', handleDisconnect);
-    socket.on('reconnect_attempt', handleReconnect);
-    socket.on('initializeSeats', handleInitialSeats);
     socket.on('seatUpdated', handleSeatUpdate);
-    socket.on('seatError', ({ seatId, message }) => {
-      alert(message);
-      setSelectedSeats(prev => {
-        const newSelected = new Set(prev);
-        newSelected.delete(seatId);
-        return newSelected;
-      });
-    });
-
-    // Add heartbeat response
-    socket.on('ping', () => {
-      socket.emit('pong');
-    });
-
-    // Add reconnection handlers
-    socket.io.on('reconnect_attempt', () => {
-      console.log('Attempting to reconnect...');
-      setConnectionStatus('reconnecting');
-    });
-
-    socket.io.on('reconnect', () => {
-      console.log('Reconnected successfully!');
-      setConnectionStatus('connected');
-      // Request fresh data after reconnection
-      socket.emit('requestInitialState');
-    });
-
-    socket.io.on('reconnect_error', (error) => {
-      console.error('Reconnection error:', error);
-      setConnectionStatus('error');
-    });
-
-    socket.io.on('reconnect_failed', () => {
-      console.error('Failed to reconnect');
-      setConnectionStatus('failed');
-    });
-
-    socket.on('seatLocked', ({ seatId }) => {
-      setLockedSeats(prev => new Map(prev).set(seatId, Date.now()));
-      alert(`Seat ${seatId} has been locked`);
-    });
-
-    // Store user ID when connected
-    socket.on('connect', () => {
-      const newUserId = socket.id;
-      setUserId(newUserId);
-      localStorage.setItem('userId', newUserId);
-    });
-
+    
     return () => {
       socket.off('connect', handleConnect);
       socket.off('disconnect', handleDisconnect);
-      socket.off('reconnect_attempt', handleReconnect);
-      socket.off('initializeSeats', handleInitialSeats);
       socket.off('seatUpdated', handleSeatUpdate);
-      socket.off('seatError');
-      socket.off('seatLocked');
-      socket.off("reconnect_attempt");
-      socket.off("reconnect");
     };
-  }, []);
+  }, [socket]);
 
-  useEffect(() => {
-    // Cleanup function when component unmounts
-    return () => {
-      const userSeats = Array.from(occupiedSeats.entries())
-        .filter(([_, seatUserId]) => seatUserId === userId)
-        .map(([seatId]) => seatId);
-
-      // Release seats held by this user
-      userSeats.forEach(seatId => {
-        socket.emit('deselectSeat', seatId);
-      });
-    };
-  }, [occupiedSeats, userId]);
-
-  const handleSeatClick = (seatId) => {
+  // Update handleSeatClick to use socket safely
+  const handleSeatClick = useCallback((seatId) => {
+    if (!socket) {
+      console.error('No socket connection available');
+      return;
+    }
+    
     if (occupiedSeats.has(seatId) && occupiedSeats.get(seatId) !== userId) {
       return; // Seat is taken by someone else
     }
 
     const isSelected = selectedSeats.has(seatId);
     
-    if (!isSelected) {
-      // Selecting a seat
-      socket.emit('updateSeat', {
-        seatId,
-        status: 'selected',
-        userId,
-        timestamp: Date.now(),
-      });
-
-      setSelectedSeats(prev => {
-        const newSelected = new Set(prev);
-        newSelected.add(seatId);
-        return newSelected;
-      });
-
-      setOccupiedSeats(prev => {
-        const newOccupied = new Map(prev);
-        newOccupied.set(seatId, userId);
-        return newOccupied;
-      });
-    } else {
-      // Deselecting a seat
-      socket.emit('updateSeat', {
-        seatId,
-        status: 'available',
-        userId,
-      });
-
-      setSelectedSeats(prev => {
-        const newSelected = new Set(prev);
-        newSelected.delete(seatId);
-        return newSelected;
-      });
-
-      setOccupiedSeats(prev => {
-        const newOccupied = new Map(prev);
-        newOccupied.delete(seatId);
-        return newOccupied;
-      });
+    try {
+      if (!isSelected) {
+        socket.emit('updateSeat', {
+          seatId,
+          status: 'selected',
+          userId,
+        });
+      } else {
+        socket.emit('updateSeat', {
+          seatId,
+          status: 'available',
+          userId,
+        });
+      }
+    } catch (error) {
+      console.error('Error updating seat:', error);
     }
-  };
+  }, [socket, occupiedSeats, selectedSeats, userId]);
 
   const getSeatStatus = useCallback((seatId) => {
     const occupiedByUserId = occupiedSeats.get(seatId);
@@ -299,27 +190,19 @@ const SeatSelection = () => {
 
   const renderSeat = (seatId) => {
     const status = getSeatStatus(seatId);
-    const remaining = timeLeft.get(seatId);
-    const isLocked = lockedSeats.has(seatId);
     
     return (
       <div className="theater__seat-container" key={seatId}>
         <button
           className={`theater__seat theater__seat--${status} 
             ${selectedSeats.has(seatId) ? 'theater__seat--selected' : ''}
-            ${isLocked ? 'theater__seat--locked' : ''}
           `}
           onClick={() => handleSeatClick(seatId)}
-          disabled={status === 'occupied' || isLocked}
+          disabled={status === 'occupied'}
           data-seat-id={seatId}
         >
           {seatId}
         </button>
-        {remaining > 0 && (
-          <div className="theater__seat-timer">
-            {Math.ceil(remaining / 1000)}s
-          </div>
-        )}
       </div>
     );
   };
@@ -442,11 +325,11 @@ const SeatSelection = () => {
     );
   }
 
-  if (connectionStatus === 'reconnecting') {
+  if (isLoading) {
     return (
       <div className="theater__loading">
         <div className="theater__loading-spinner"></div>
-        <p>Reconnecting to server...</p>
+        <p>Loading seating arrangement...</p>
       </div>
     );
   }

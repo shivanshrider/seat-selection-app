@@ -4,18 +4,8 @@ import Seat from '../Seat';
 import SeatSummary from '../SeatSummary';
 import './styles.css';
 
-// Create socket connection with error handling
-let socket;
-try {
-  socket = io('http://localhost:3001', {
-    reconnection: true,
-    reconnectionDelay: 1000,
-    reconnectionDelayMax: 5000,
-    reconnectionAttempts: 5
-  });
-} catch (error) {
-  console.error('Socket connection error:', error);
-}
+// Get the URL from environment variables
+const SOCKET_URL = 'https://pvc-badge-ceremony.onrender.com';
 
 const userId = Math.random().toString(36).substr(2, 9); // Generate random user ID (use actual auth in production)
 
@@ -24,7 +14,8 @@ const SeatSelection = () => {
   const [occupiedSeats, setOccupiedSeats] = useState([]);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [connectionError, setConnectionError] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState('connecting');
+  const [socket, setSocket] = useState(null);
   
   // Define all rows together, but limit side sections to 13 rows
   const rowsData = Array.from({ length: 14 }, (_, rowIndex) => {
@@ -67,66 +58,73 @@ const SeatSelection = () => {
 
   // Initialize socket connection and event listeners
   useEffect(() => {
-    if (!socket) {
-      setConnectionError(true);
-      setLoading(false);
-      return;
-    }
-
-    // Handle connection events
-    socket.on('connect', () => {
-      console.log('Connected to server');
-      setConnectionError(false);
-      // Request initial seat data
-      socket.emit('getSeatStatus');
+    console.log('Attempting to connect to:', SOCKET_URL);
+    
+    const newSocket = io(SOCKET_URL, {
+      transports: ['websocket', 'polling'],
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+      timeout: 20000,
+      withCredentials: false,  // Changed to false
+      forceNew: true
     });
 
-    socket.on('connect_error', (error) => {
-      console.error('Connection error:', error);
-      setConnectionError(true);
-      setLoading(false);
+    newSocket.on('connect', () => {
+      console.log('Connected to server');
+      setConnectionStatus('connected');
+      setSocket(newSocket);
+    });
+
+    newSocket.on('connect_error', (error) => {
+      console.error('Connection error:', error.message);
+      setConnectionStatus('error');
+    });
+
+    newSocket.on('disconnect', () => {
+      console.log('Disconnected from server');
+      setConnectionStatus('disconnected');
     });
 
     // Handle initial seat status
-    socket.on('initializeSeats', ({ selectedSeats, occupiedSeats }) => {
+    newSocket.on('initializeSeats', ({ selectedSeats, occupiedSeats }) => {
       setSelectedSeats(selectedSeats);
       setOccupiedSeats(occupiedSeats);
       setLoading(false);
     });
 
     // Handle real-time updates
-    socket.on('seatUpdated', ({ selectedSeats, occupiedSeats }) => {
-      setSelectedSeats(selectedSeats);
-      setOccupiedSeats(occupiedSeats);
+    newSocket.on('seatUpdated', ({ seatId, status, userId: updatedBy }) => {
+      if (status === 'selected') {
+        setOccupiedSeats(prev => [...prev, seatId]);
+      } else if (status === 'available') {
+        setOccupiedSeats(prev => prev.filter(id => id !== seatId));
+        setSelectedSeats(prev => prev.filter(id => id !== seatId));
+      }
     });
 
     // Handle errors
-    socket.on('seatError', ({ seatId, message }) => {
+    newSocket.on('seatError', ({ seatId, message }) => {
       setError(message);
       setTimeout(() => setError(null), 3000);
     });
 
     // Handle booking confirmation
-    socket.on('bookingConfirmed', ({ seats }) => {
+    newSocket.on('bookingConfirmed', ({ seats }) => {
       console.log('Booking confirmed for seats:', seats);
       // Handle successful booking (e.g., show confirmation message, redirect)
     });
 
     // Handle booking errors
-    socket.on('bookingError', ({ message }) => {
+    newSocket.on('bookingError', ({ message }) => {
       setError(message);
       setTimeout(() => setError(null), 3000);
     });
 
-    // Cleanup on unmount
     return () => {
-      socket.off('connect');
-      socket.off('connect_error');
-      socket.off('initializeSeats');
-      socket.off('seatUpdated');
-      socket.off('seatError');
-      socket.off('bookingConfirmed');
-      socket.off('bookingError');
+      if (newSocket) {
+        console.log('Cleaning up socket connection');
+        newSocket.close();
+      }
     };
   }, []);
 
@@ -190,7 +188,7 @@ const SeatSelection = () => {
 
   return (
     <div className="theater__seating">
-      {connectionError ? (
+      {connectionStatus === 'error' ? (
         <div className="theater__error">
           Unable to connect to server. Please refresh the page or try again later.
         </div>
