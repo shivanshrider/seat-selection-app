@@ -3,7 +3,7 @@ services:
     name: pvc-badge-ceremony
     env: node
     buildCommand: npm install
-    startCommand: node index.js
+    startCommand: npm start
     envVars:
       - key: PORT
         value: 3001 
