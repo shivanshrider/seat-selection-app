@@ -10,11 +10,27 @@ app.use(cors());
 
 const server = createServer(app);
 
-const io = new Server(server);
+const io = new Server(server, {
+  cors: {
+    origin: ["https://polite-valkyrie-690a58.netlify.app"],
+    methods: ["GET", "POST"],
+    allowedHeaders: ["*"],
+    credentials: false
+  },
+  path: '/socket.io/',
+  serveClient: false,
+  pingInterval: 10000,
+  pingTimeout: 5000,
+  cookie: false
+});
 
 // Health check endpoint
 app.get('/', (req, res) => {
-  res.send('Server is running');
+  res.json({ status: 'Server is running' });
+});
+
+app.get('/health', (req, res) => {
+  res.json({ status: 'healthy' });
 });
 
 // Persistent storage for seats
@@ -27,7 +43,7 @@ const saveSeatData = () => {
 };
 
 io.on('connection', (socket) => {
-  console.log('Client connected:', socket.id);
+  console.log('New client connected:', socket.id);
   
   socket.emit('welcome', { message: 'Connected to server' });
   
@@ -40,6 +56,6 @@ io.on('connection', (socket) => {
 setInterval(saveSeatData, 5 * 60 * 1000);
 
 const PORT = process.env.PORT || 3001;
-server.listen(PORT, () => {
+server.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`);
 }); 
