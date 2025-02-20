@@ -12,21 +12,18 @@ const server = createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: ["https://polite-valkyrie-690a58.netlify.app"],
+    origin: "*",
     methods: ["GET", "POST"],
-    allowedHeaders: ["*"],
     credentials: false
   },
-  path: '/socket.io/',
-  serveClient: false,
-  pingInterval: 10000,
-  pingTimeout: 5000,
-  cookie: false
+  transports: ['websocket'],
+  pingTimeout: 60000,
+  pingInterval: 25000
 });
 
 // Health check endpoint
 app.get('/', (req, res) => {
-  res.json({ status: 'Server is running' });
+  res.send('Server is running');
 });
 
 app.get('/health', (req, res) => {
@@ -43,9 +40,7 @@ const saveSeatData = () => {
 };
 
 io.on('connection', (socket) => {
-  console.log('New client connected:', socket.id);
-  
-  socket.emit('welcome', { message: 'Connected to server' });
+  console.log('Client connected:', socket.id);
   
   socket.on('disconnect', () => {
     console.log('Client disconnected:', socket.id);
